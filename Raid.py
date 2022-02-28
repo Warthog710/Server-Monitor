@@ -1,6 +1,7 @@
 import enum
 
 from Email import EmailSender
+from MyLogger import Logger
 
 class RaidStates(enum.Enum):
     drive_failure = 0
@@ -9,9 +10,12 @@ class RaidStates(enum.Enum):
 class MonitorRaid:
     def __init__(self):
         self.__email = EmailSender()
+        self.__logger = Logger()
 
     #? Monitors a mdadm raid by reading /proc/mdstat
     def monitor(self):
+        self.__logger.info('Checking raid status...')
+
         with open('/proc/mdstat', 'r') as status:
             status_text = status.read()
 
@@ -20,7 +24,10 @@ class MonitorRaid:
         # If a drive has failed send a warning
         if raid_status == RaidStates.drive_failure:
             failed_drives = self.get_failed_drives(status_text)
+            self.__logger.warning(f'Detected failed drives! {failed_drives}')
             self.__email.send_raid_failure_warning(status_text, failed_drives)
+        else:
+            self.__logger.info('Detected no issues.')
     
     def get_raid_status(self, status):
         raid_status = RaidStates.raid_safe
